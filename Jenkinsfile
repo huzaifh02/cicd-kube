@@ -1,16 +1,13 @@
 pipeline {
-
     agent any
 
-
     environment {
-        registry = "docker pull huzaifh02/vprofileapp"
+        registry = "huzaifh02/vprofileapp"
         registryCredential = 'dockerhub'
     }
 
-    stages{
-
-        stage('BUILD'){
+    stages {
+        stage('BUILD') {
             steps {
                 sh 'mvn clean install -DskipTests'
             }
@@ -22,19 +19,19 @@ pipeline {
             }
         }
 
-        stage('UNIT TEST'){
+        stage('UNIT TEST') {
             steps {
                 sh 'mvn test'
             }
         }
 
-        stage('INTEGRATION TEST'){
+        stage('INTEGRATION TEST') {
             steps {
                 sh 'mvn verify -DskipUnitTests'
             }
         }
 
-        stage ('CODE ANALYSIS WITH CHECKSTYLE'){
+        stage('CODE ANALYSIS WITH CHECKSTYLE') {
             steps {
                 sh 'mvn checkstyle:checkstyle'
             }
@@ -45,34 +42,32 @@ pipeline {
             }
         }
 
-
         stage('Building image') {
-            steps{
-              script {
-                dockerImage = docker.build registry + ":latest"
-              }
+            steps {
+                script {
+                    dockerImage = docker.build("${registry}:latest")
+                }
             }
         }
-        
+
         stage('Deploy Image') {
-          steps{
-            script {
-              docker.withRegistry( '', registryCredential ) {
-                dockerImage.push("$BUILD_NUMBER")
-                dockerImage.push('latest')
-              }
+            steps {
+                script {
+                    docker.withRegistry('', registryCredential) {
+                        dockerImage.push("${env.BUILD_NUMBER}")
+                        dockerImage.push('latest')
+                    }
+                }
             }
-          }
         }
 
         stage('Remove Unused docker image') {
-          steps{
-            sh "docker rmi $registry:$BUILD_NUMBER"
-          }
+            steps {
+                sh "docker rmi ${registry}:${env.BUILD_NUMBER}"
+            }
         }
 
         stage('CODE ANALYSIS with SONARQUBE') {
-
             environment {
                 scannerHome = tool 'mysonarscanner4'
             }
@@ -94,14 +89,12 @@ pipeline {
                 }
             }
         }
+
         stage('Kubernetes Deploy') {
-	  agent { label 'KOPS' }
+            agent { label 'KOPS' }
             steps {
-                    sh "helm upgrade --install --force vproifle-stack helm/vprofilecharts --set appimage=${registry}:${BUILD_NUMBER} --namespace prod"
+                sh "helm upgrade --install --force vproifle-stack helm/vprofilecharts --set appimage=${registry}:${env.BUILD_NUMBER} --namespace prod"
             }
         }
-
     }
-
-
 }
