@@ -1,13 +1,13 @@
 pipeline {
 
     agent any
-/*
+
 	tools {
-        maven "maven3"
+        maven "MAVEN3"
     }
-*/
+
     environment {
-        registry = "imranvisualpath/vproappdock"
+        registry = "docker pull huzaifh02/vprofileapp:latest"
         registryCredential = 'dockerhub'
     }
 
