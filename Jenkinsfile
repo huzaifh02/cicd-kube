@@ -4,7 +4,7 @@ pipeline {
 
 
     environment {
-        registry = "docker pull huzaifh02/vprofileapp:latest"
+        registry = "docker pull huzaifh02/vprofileapp"
         registryCredential = 'dockerhub'
     }
 
