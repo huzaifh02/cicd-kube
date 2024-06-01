@@ -2,9 +2,6 @@ pipeline {
 
     agent any
 
-	tools {
-        maven "MAVEN3"
-    }
 
     environment {
         registry = "docker pull huzaifh02/vprofileapp:latest"
