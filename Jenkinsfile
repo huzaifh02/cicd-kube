@@ -13,9 +13,7 @@ pipeline {
     stages {
         stage('Setup Helm') {
             steps {
-                sh '''
-                helm version
-                '''
+                sh 'helm version'
             }
         }
 
