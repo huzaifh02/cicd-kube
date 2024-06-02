@@ -4,9 +4,19 @@ pipeline {
     environment {
         registry = "huzaifh02/vprofileapp"
         registryCredential = 'dockerhub'
+        awsRegion = 'us-west-2' // Update with your region
+        eksClusterName = 'vprofile' // Update with your EKS cluster name
+        helmRepo = 'https://github.com/huzaifh02/cicd-kube' // URL to your Helm charts repository
+        helmChartPath = 'helm/vprofilecharts' // Path to the Helm chart within the repository
     }
 
     stages {
+        stage('Clone Helm Charts Repo') {
+            steps {
+                git branch: 'master', url: "${helmRepo}"
+            }
+        }
+
         stage('BUILD') {
             steps {
                 sh 'mvn clean install -DskipTests'
@@ -69,7 +79,7 @@ pipeline {
 
         stage('CODE ANALYSIS with SONARQUBE') {
             environment {
-                scannerHome = tool 'mysonarscanner4' // Ensure this matches the updated tool name in Jenkins
+                scannerHome = tool 'mysonarscanner4'
             }
 
             steps {
@@ -83,22 +93,8 @@ pipeline {
                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
-            }
-        }
 
-        stage('Wait for Quality Gate') {
-            steps {
-                timeout(time: 2, unit: 'MINUTES') {  // Increase timeout if necessary
+                timeout(time: 20, unit: 'MINUTES') {  // Increase timeout if necessary
                     waitForQualityGate abortPipeline: true
                 }
             }
-        }
-
-        stage('Kubernetes Deploy') {
-            agent { label 'KOPS' }
-            steps {
-                sh "helm upgrade --install --force vproifle-stack helm/vprofilecharts --set appimage=${registry}:${env.BUILD_NUMBER} --namespace prod"
-            }
-        }
-    }
-}
