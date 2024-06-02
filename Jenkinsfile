@@ -5,12 +5,20 @@ pipeline {
         registry = "huzaifh02/vprofileapp"
         registryCredential = 'dockerhub'
         awsRegion = 'us-west-2' // Update with your region
-        eksClusterName = 'vprofile' // Update with your EKS cluster name
+        eksClusterName = 'your-eks-cluster' // Update with your EKS cluster name
         helmRepo = 'https://github.com/huzaifh02/cicd-kube' // URL to your Helm charts repository
         helmChartPath = 'helm/vprofilecharts' // Path to the Helm chart within the repository
     }
 
     stages {
+        stage('Setup Helm') {
+            steps {
+                sh '''
+                helm version
+                '''
+            }
+        }
+
         stage('Clone Helm Charts Repo') {
             steps {
                 git branch: 'master', url: "${helmRepo}"
@@ -98,20 +106,22 @@ pipeline {
                     waitForQualityGate abortPipeline: true
                 }
             }
-            stage('Deploy to EKS using Helm') {
-                        steps {
-                            script {
-                                sh '''
-                                helm upgrade --install myapp ${helmChartPath} --set image.repository=${registry} --set image.tag=${env.BUILD_NUMBER} --namespace default
-                                '''
-                            }
-                        }
-                    }
-                }
+        }
 
-                post {
-                    always {
-                        cleanWs()
-                    }
+        stage('Deploy to EKS using Helm') {
+            steps {
+                script {
+                    sh '''
+                    helm upgrade --install myapp ${helmChartPath} --set image.repository=${registry} --set image.tag=${env.BUILD_NUMBER} --namespace default
+                    '''
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
