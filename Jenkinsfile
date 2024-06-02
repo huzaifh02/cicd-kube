@@ -1,29 +1,19 @@
 pipeline {
-    agent any
 
+    agent any
+/*
+	tools {
+        maven "maven3"
+    }
+*/
     environment {
-        registry = "huzaifh02/vprofileapp"
+        registry = "huzaifh02/vproapp"
         registryCredential = 'dockerhub'
-        awsRegion = 'ap-south-1' // Update with your region
-        eksClusterName = 'vprofile' // Update with your EKS cluster name
-        helmRepo = 'https://github.com/huzaifh02/cicd-kube' // URL to your Helm charts repository
-        helmChartPath = 'helm/vprofilecharts' // Path to the Helm chart within the repository
     }
 
-    stages {
-        stage('Setup Helm') {
-            steps {
-                sh 'helm version'
-            }
-        }
+    stages{
 
-        stage('Clone Helm Charts Repo') {
-            steps {
-                git branch: 'master', url: "${helmRepo}"
-            }
-        }
-
-        stage('BUILD') {
+        stage('BUILD'){
             steps {
                 sh 'mvn clean install -DskipTests'
             }
@@ -35,19 +25,19 @@ pipeline {
             }
         }
 
-        stage('UNIT TEST') {
+        stage('UNIT TEST'){
             steps {
                 sh 'mvn test'
             }
         }
 
-        stage('INTEGRATION TEST') {
+        stage('INTEGRATION TEST'){
             steps {
                 sh 'mvn verify -DskipUnitTests'
             }
         }
 
-        stage('CODE ANALYSIS WITH CHECKSTYLE') {
+        stage ('CODE ANALYSIS WITH CHECKSTYLE'){
             steps {
                 sh 'mvn checkstyle:checkstyle'
             }
@@ -58,32 +48,34 @@ pipeline {
             }
         }
 
+
         stage('Building image') {
-            steps {
-                script {
-                    dockerImage = docker.build("${registry}:latest")
-                }
+            steps{
+              script {
+                dockerImage = docker.build registry + ":$BUILD_NUMBER"
+              }
             }
         }
 
         stage('Deploy Image') {
-            steps {
-                script {
-                    docker.withRegistry('', registryCredential) {
-                        dockerImage.push("${env.BUILD_NUMBER}")
-                        dockerImage.push('latest')
-                    }
-                }
+          steps{
+            script {
+              docker.withRegistry( '', registryCredential ) {
+                dockerImage.push("$BUILD_NUMBER")
+                dockerImage.push('latest')
+              }
             }
+          }
         }
 
         stage('Remove Unused docker image') {
-            steps {
-                sh "docker rmi ${registry}:${env.BUILD_NUMBER}"
-            }
+          steps{
+            sh "docker rmi $registry:$BUILD_NUMBER"
+          }
         }
 
         stage('CODE ANALYSIS with SONARQUBE') {
+
             environment {
                 scannerHome = tool 'mysonarscanner4'
             }
@@ -91,39 +83,28 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar-pro') {
                     sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
-                       -Dsonar.projectName=vprofile-repo \
-                       -Dsonar.projectVersion=1.0 \
-                       -Dsonar.sources=src/ \
-                       -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
-                       -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                       -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                       -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
+                   -Dsonar.projectName=vprofile-repo \
+                   -Dsonar.projectVersion=1.0 \
+                   -Dsonar.sources=src/ \
+                   -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
+                   -Dsonar.junit.reportsPath=target/surefire-reports/ \
+                   -Dsonar.jacoco.reportsPath=target/jacoco.exec \
+                   -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
-            }
-        }
 
-        stage('Wait for Quality Gate') {
-            steps {
-                timeout(time: 30, unit: 'MINUTES') {  // Increase timeout if necessary
+                timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
         }
-
-        stage('Deploy to EKS using Helm') {
+        stage('Kubernetes Deploy') {
+	  agent { label 'KOPS' }
             steps {
-                script {
-                    sh '''
-                    helm upgrade --install myapp ${helmChartPath} --set image.repository=${registry} --set image.tag=${env.BUILD_NUMBER} --namespace default
-                    '''
-                }
+                    sh "helm upgrade --install --force vproifle-stack helm/vprofilecharts --set appimage=${registry}:${BUILD_NUMBER} --namespace prod"
             }
         }
+
     }
 
-    post {
-        always {
-            cleanWs()
-        }
-    }
+
 }
