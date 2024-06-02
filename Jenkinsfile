@@ -98,3 +98,20 @@ pipeline {
                     waitForQualityGate abortPipeline: true
                 }
             }
+            stage('Deploy to EKS using Helm') {
+                        steps {
+                            script {
+                                sh '''
+                                helm upgrade --install myapp ${helmChartPath} --set image.repository=${registry} --set image.tag=${env.BUILD_NUMBER} --namespace default
+                                '''
+                            }
+                        }
+                    }
+                }
+
+                post {
+                    always {
+                        cleanWs()
+                    }
+                }
+            }
