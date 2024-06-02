@@ -69,22 +69,26 @@ pipeline {
 
         stage('CODE ANALYSIS with SONARQUBE') {
             environment {
-                scannerHome = tool 'mysonarscanner4'
+                scannerHome = tool 'mysonarscanner4' // Ensure this matches the updated tool name in Jenkins
             }
 
             steps {
                 withSonarQubeEnv('sonar-pro') {
                     sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=vprofile \
-                   -Dsonar.projectName=vprofile-repo \
-                   -Dsonar.projectVersion=1.0 \
-                   -Dsonar.sources=src/ \
-                   -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
-                   -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                   -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                   -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
+                       -Dsonar.projectName=vprofile-repo \
+                       -Dsonar.projectVersion=1.0 \
+                       -Dsonar.sources=src/ \
+                       -Dsonar.java.binaries=target/test-classes/com/visualpathit/account/controllerTest/ \
+                       -Dsonar.junit.reportsPath=target/surefire-reports/ \
+                       -Dsonar.jacoco.reportsPath=target/jacoco.exec \
+                       -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
+            }
+        }
 
-                timeout(time: 10, unit: 'MINUTES') {
+        stage('Wait for Quality Gate') {
+            steps {
+                timeout(time: 20, unit: 'MINUTES') {  // Increase timeout if necessary
                     waitForQualityGate abortPipeline: true
                 }
             }
