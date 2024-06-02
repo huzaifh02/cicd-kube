@@ -4,8 +4,8 @@ pipeline {
     environment {
         registry = "huzaifh02/vprofileapp"
         registryCredential = 'dockerhub'
-        awsRegion = 'us-west-2' // Update with your region
-        eksClusterName = 'your-eks-cluster' // Update with your EKS cluster name
+        awsRegion = 'ap-south-1' // Update with your region
+        eksClusterName = 'vprofile' // Update with your EKS cluster name
         helmRepo = 'https://github.com/huzaifh02/cicd-kube' // URL to your Helm charts repository
         helmChartPath = 'helm/vprofilecharts' // Path to the Helm chart within the repository
     }
@@ -101,8 +101,12 @@ pipeline {
                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
+            }
+        }
 
-                timeout(time: 20, unit: 'MINUTES') {  // Increase timeout if necessary
+        stage('Wait for Quality Gate') {
+            steps {
+                timeout(time: 30, unit: 'MINUTES') {  // Increase timeout if necessary
                     waitForQualityGate abortPipeline: true
                 }
             }
