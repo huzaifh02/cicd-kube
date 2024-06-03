@@ -95,15 +95,13 @@ pipeline {
             }
         }
          stage('Kubernetes Deploy') {
-                    steps {
-                        script {
-                            sh 'aws eks update-kubeconfig --name <your-cluster-name> --region <your-region>'
-                            sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:${BUILD_NUMBER} --namespace prod"
-                        }
-                    }
+         	  agent { label 'KOPS' }
+                     steps {
+                             sh "helm upgrade --install --force vproifle-stack helm/vprofilecharts --set appimage=${registry}:${BUILD_NUMBER} --namespace prod"
+                     }
+              }
+
          }
 
+
     }
-
-
-}
