@@ -27,7 +27,7 @@ spec:
           command:
             - sh
             - -c
-            - until nslookup vpromc.prod.svc.cluster.local; do echo waiting for memcache; sleep 2; done;
+            - until nslookup vprocache01.prod.svc.cluster.local; do echo waiting for memcache; sleep 2; done;
       containers:
         - name: vproapp
           image: huzaifh02/vprofileapp:12
